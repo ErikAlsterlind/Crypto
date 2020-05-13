@@ -10,6 +10,8 @@
 
 #include "Crypto.h"
 
+#define DEBUG 0
+
 static unsigned int initHashSha256[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 
                                          0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
 static unsigned int constantWordsSha256[64] = {0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 
@@ -41,14 +43,10 @@ void ErikSha256(unsigned char *inBuff, unsigned long inLenBits, unsigned char *o
         fprintf(stderr, "ERROR - SHA256: invalid output buffer provided to function. Must be %d bytes.\n", SHA256_OUTPUT_BYTES);
         return;
     }
-    DumpHexString(inBuff, currInputLenBits);
     if (PadInputSha256(&inBuff, &currInputLenBits)) {
         fprintf(stderr, "SHA256 function not completed. Returning...\n");
         return;
     }
-    DumpHexStringBytes(inBuff, currInputLenBits);
-    //DumpHexString(inBuff, currInputLenBits);
-
     numBlocks = currInputLenBits / SHA256_BLOCK_SIZE_BITS;
     memcpy(currHash, initHashSha256, sizeof(unsigned int)*8);
 
@@ -62,7 +60,7 @@ void ErikSha256(unsigned char *inBuff, unsigned long inLenBits, unsigned char *o
     }
 
     for (index = 0; index < 8; index++) {
-        memcpy(outBuff+(index*8), &currHash[index], sizeof(unsigned int));
+        memcpy(outBuff+(index*4), &currHash[index], sizeof(unsigned int));
     }
 }
 
@@ -79,12 +77,6 @@ void CompressFuncSha256(unsigned int workingVars[8], unsigned int messageSchedul
     unsigned int *h = &workingVars[7];
 
     for (index = 0; index < 64; index++) {
-        if (index < 2) {
-            for (innerIndex = 0; innerIndex < 8; innerIndex++) {
-                fprintf(stderr, "%08X ", workingVars[innerIndex]);
-            }
-            fprintf(stderr, "\n");
-        }
         T1 = (*h) + (SHA256_BSIGMA1_FUNC((*e))) + (SHA256_CH_FUNC((*e), (*f), (*g))) 
                 + constantWordsSha256[index] + messageSchedule[index];
         T2 = (SHA256_BSIGMA0_FUNC((*a))) + (SHA256_MAJ_FUNC((*a), (*b), (*c)));
@@ -101,19 +93,40 @@ void CompressFuncSha256(unsigned int workingVars[8], unsigned int messageSchedul
 
 int GenMessageScheduleSha256(unsigned char *inputBlock, unsigned int messageSchedule[64]) {
     unsigned int index, offset;
+    unsigned int bigEndianWord = 0;
+    unsigned int littleEndiandWord = 0;
 
     if (!inputBlock) {
         fprintf(stderr, "ERROR - SHA256: NULL pointer passed as input block to generate message schedule.\n");
         return ERR_SHA256_MESS_SCHED;
     }
+    // I hate big-endian
     for (index = 0; index < 16; index++) {
-        memcpy(&(messageSchedule[index]), inputBlock+(sizeof(unsigned int)*index), sizeof(unsigned int));
+        memcpy(&littleEndiandWord, inputBlock+(sizeof(unsigned int)*index), sizeof(unsigned int));
+        if (index < 14) {
+            bigEndianWord = littleEndiandWord << 24;
+            bigEndianWord |= (littleEndiandWord & 0xFF00) << 8;
+            bigEndianWord |= (littleEndiandWord & 0xFF0000) >> 8;
+            bigEndianWord |= littleEndiandWord >> 24;
+            messageSchedule[index] = bigEndianWord;
+        } else {
+            messageSchedule[index] = littleEndiandWord;
+        }
     }
     for (; index < 64; index++) {
         // Using the 32b overflow like a mod 2^32 operation works I think
         messageSchedule[index] = ((SHA256_LSIGMA1_FUNC(messageSchedule[index-2])) + messageSchedule[index-7] 
                                     + (SHA256_LSIGMA0_FUNC(messageSchedule[index-15])) + messageSchedule[index-16]);
     }
+#if DEBUG
+    fprintf(stderr, "Message Schedule before starting:\n");
+    for (index = 0; index < 64; index++) {
+        if (!(index % 4) && (index)) {
+        fprintf(stderr, "\n");
+        }
+        fprintf(stderr, "0x%08X\n", messageSchedule[index]);
+    }
+#endif
 
     return 0;
 }
@@ -152,9 +165,10 @@ int PadInputSha256(unsigned char **inBuff, unsigned long *inLenBitsPtr) {
         free(oldInput); oldInput = NULL;
     }
     newLenBits = inLenBits;
-    input[(newLenBits / 8)] |= (1 << (newLenBits % 8));
+    input[(newLenBits / 8)] |= (0x80 >> (newLenBits % 8));
     newLenBits = newLenBits + 1 + numZeroes;
-    memcpy(input+(newLenBits/8), inLenStr, 8);
+    memcpy(input+(newLenBits/8), inLenStr+4, 4);
+    memcpy(input+(newLenBits/8)+4, inLenStr, 4);
     newLenBits += 64;
     
     (*inLenBitsPtr) = newLenBits;

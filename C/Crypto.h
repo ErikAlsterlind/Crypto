@@ -16,7 +16,7 @@ enum algorithm {
 #define SHA256_SR(val, shift)     (val >> shift)
 #define SHA256_CH_FUNC(e, f, g)   ((e & f) ^ ((~e) & g))
 #define SHA256_MAJ_FUNC(a, b, c)  ((a & b) ^ (a & c) ^ (b & c))
-#define SHA256_BSIGMA0_FUNC(x)    ((SHA256_RR(x, 7)) ^ (SHA256_RR(x, 13)) ^ (SHA256_RR(x, 22)))
+#define SHA256_BSIGMA0_FUNC(x)    ((SHA256_RR(x, 2)) ^ (SHA256_RR(x, 13)) ^ (SHA256_RR(x, 22)))
 #define SHA256_BSIGMA1_FUNC(x)    ((SHA256_RR(x, 6)) ^ (SHA256_RR(x, 11)) ^ (SHA256_RR(x, 25)))
 #define SHA256_LSIGMA0_FUNC(x)    ((SHA256_RR(x, 7)) ^ (SHA256_RR(x, 18)) ^ (SHA256_SR(x, 3)))
 #define SHA256_LSIGMA1_FUNC(x)    ((SHA256_RR(x, 17)) ^ (SHA256_RR(x, 19)) ^ (SHA256_SR(x, 10)))
