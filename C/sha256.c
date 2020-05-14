@@ -32,27 +32,32 @@ static unsigned int constantWordsSha256[64] = {0x428a2f98, 0x71374491, 0xb5c0fbc
                                             0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
 
 // Top level sha256 function assumes inBuff is validly allocated and outBuff is a 32B allocated array
-void ErikSha256(unsigned char *inBuff, unsigned long inLenBits, unsigned char *outBuff) {
+int ErikSha256(unsigned char *inBuff, unsigned long inLenBits, unsigned char *outBuff) {
     unsigned long currInputLenBits = inLenBits;
     unsigned long numBlocks;
     unsigned int index, innerIndex;
     unsigned int currHash[8] = {0}, workingVars[8] = {0};
     unsigned int messageSchedule[64] = {0};
+    unsigned char *input;
 
+    input = calloc((inLenBits/8)+1, sizeof(unsigned char));
+    memcpy(input, inBuff, (inLenBits/8));
     if (!outBuff) {
         fprintf(stderr, "ERROR - SHA256: invalid output buffer provided to function. Must be %d bytes.\n", SHA256_OUTPUT_BYTES);
-        return;
+        free(input); input = NULL;
+        return ERR_SHA256_MAIN;
     }
-    if (PadInputSha256(&inBuff, &currInputLenBits)) {
+    if (PadInputSha256(&input, &currInputLenBits)) {
         fprintf(stderr, "SHA256 function not completed. Returning...\n");
-        return;
+        free(input); input = NULL;
+        return ERR_SHA256_MAIN;
     }
     numBlocks = currInputLenBits / SHA256_BLOCK_SIZE_BITS;
     memcpy(currHash, initHashSha256, sizeof(unsigned int)*8);
 
     for (index = 0; index < numBlocks; index++) { 
         memcpy(workingVars, currHash, sizeof(unsigned int)*8);
-        GenMessageScheduleSha256((inBuff+(index*SHA256_BLOCK_SIZE_BYTES)), messageSchedule);
+        GenMessageScheduleSha256((input+(index*SHA256_BLOCK_SIZE_BYTES)), messageSchedule);
         CompressFuncSha256(workingVars, messageSchedule);
         for (innerIndex = 0; innerIndex < 8; innerIndex++) {
             currHash[innerIndex] = currHash[innerIndex] + workingVars[innerIndex];
@@ -62,6 +67,9 @@ void ErikSha256(unsigned char *inBuff, unsigned long inLenBits, unsigned char *o
     for (index = 0; index < 8; index++) {
         memcpy(outBuff+(index*4), &currHash[index], sizeof(unsigned int));
     }
+    free(input); input = NULL;
+
+    return 0;
 }
 
 void CompressFuncSha256(unsigned int workingVars[8], unsigned int messageSchedule[64]) {
@@ -88,6 +96,14 @@ void CompressFuncSha256(unsigned int workingVars[8], unsigned int messageSchedul
         *c = *b;
         *b = *a;
         *a = T1 + T2;
+
+#if DEBUG
+        fprintf(stderr, "%d: ", index);
+        for (innerIndex = 0; innerIndex < 8; innerIndex++) {
+            fprintf(stderr, "0x%08X ", workingVars[innerIndex]);
+        }
+        fprintf(stderr, "\n");
+#endif
     }
 }
 
@@ -102,19 +118,9 @@ int GenMessageScheduleSha256(unsigned char *inputBlock, unsigned int messageSche
     }
     // I hate big-endian
     for (index = 0; index < 16; index++) {
-        memcpy(&littleEndiandWord, inputBlock+(sizeof(unsigned int)*index), sizeof(unsigned int));
-        if (index < 14) {
-            bigEndianWord = littleEndiandWord << 24;
-            bigEndianWord |= (littleEndiandWord & 0xFF00) << 8;
-            bigEndianWord |= (littleEndiandWord & 0xFF0000) >> 8;
-            bigEndianWord |= littleEndiandWord >> 24;
-            messageSchedule[index] = bigEndianWord;
-        } else {
-            messageSchedule[index] = littleEndiandWord;
-        }
+        memcpy(&(messageSchedule[index]), inputBlock+(sizeof(unsigned int)*index), sizeof(unsigned int));
     }
     for (; index < 64; index++) {
-        // Using the 32b overflow like a mod 2^32 operation works I think
         messageSchedule[index] = ((SHA256_LSIGMA1_FUNC(messageSchedule[index-2])) + messageSchedule[index-7] 
                                     + (SHA256_LSIGMA0_FUNC(messageSchedule[index-15])) + messageSchedule[index-16]);
     }
@@ -167,6 +173,11 @@ int PadInputSha256(unsigned char **inBuff, unsigned long *inLenBitsPtr) {
     newLenBits = inLenBits;
     input[(newLenBits / 8)] |= (0x80 >> (newLenBits % 8));
     newLenBits = newLenBits + 1 + numZeroes;
+
+    if (BigEndianConvertSha256(input, newLenBits)) {
+        return ERR_SHA256_BIGENDCONV;
+    }
+
     memcpy(input+(newLenBits/8), inLenStr+4, 4);
     memcpy(input+(newLenBits/8)+4, inLenStr, 4);
     newLenBits += 64;
@@ -174,6 +185,29 @@ int PadInputSha256(unsigned char **inBuff, unsigned long *inLenBitsPtr) {
     (*inLenBitsPtr) = newLenBits;
     return 0;
 }
+
+int BigEndianConvertSha256(unsigned char *buff, unsigned long numBits) {
+    unsigned long numWords = (numBits / 32);
+    unsigned int index;
+    unsigned char hold;
+
+    if ((numBits % 32)) {
+        fprintf(stderr, "ERROR - SHA256: BigEndianConvert expects a bit length that is a multiple of 32, found %lu\n", numBits);
+        return ERR_SHA256_BIGENDCONV;
+    }
+
+    for (index = 0; index < numWords; index++) {
+        hold = buff[(index*4)];
+        buff[(index*4)] = buff[(index*4)+3];
+        buff[(index*4)+3] = hold;
+        hold = buff[(index*4)+1];
+        buff[(index*4)+1] = buff[(index*4)+2];
+        buff[(index*4)+2] = hold;
+    }
+
+    return 0;
+}
+
 unsigned int CalcPadBitLenSha256(unsigned long currLen) {
     unsigned int numZeroes = CalcNumPadZeroesSha256(currLen);
     currLen = currLen + 1 + numZeroes + 64;

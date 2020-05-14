@@ -25,8 +25,10 @@ enum algorithm {
 #define ERR_SHA256_PADDING        -2
 #define ERR_SHA256_MESS_SCHED     -3
 #define ERR_SHA256_COMPRESS       -4
+#define ERR_SHA256_BIGENDCONV     -5
+#define ERR_SHA256_MAIN           -6
 
-void ErikSha256(unsigned char *inBuff, unsigned long inLenBits, unsigned char *outBuff);
+int ErikSha256(unsigned char *inBuff, unsigned long inLenBits, unsigned char *outBuff);
 void CompressFuncSha256(unsigned int workingVars[8], unsigned int messageSchedule[64]);
 int GenMessageScheduleSha256(unsigned char *inputBlock, unsigned int messageSchedule[64]);
 int PadInputSha256(unsigned char **inBuff, unsigned long *inLenBitsPtr);
@@ -34,5 +36,6 @@ unsigned int CalcPadBitLenSha256(unsigned long currLen);
 unsigned int CalcNumPadZeroesSha256(unsigned long currLen);
 void DumpHexString(unsigned char *input, unsigned long inLenBits);
 void DumpHexStringBytes(unsigned char *input, unsigned long inLenBits);
+int BigEndianConvertSha256(unsigned char *buff, unsigned long numBits);
 
 #endif
