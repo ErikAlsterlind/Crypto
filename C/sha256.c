@@ -12,8 +12,11 @@
 
 #define DEBUG 0
 
+// Sha256 initial hash values
 static unsigned int initHashSha256[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 
                                          0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
+                                         
+// Sha256 constants needed for functionality
 static unsigned int constantWordsSha256[64] = {0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 
                                             0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
                                             0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 
@@ -31,7 +34,8 @@ static unsigned int constantWordsSha256[64] = {0x428a2f98, 0x71374491, 0xb5c0fbc
                                             0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 
                                             0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
 
-// Top level sha256 function assumes inBuff is validly allocated and outBuff is a 32B allocated array
+// Top level sha256 function
+// Assumes inBuff is validly allocated and outBuff is a 32B allocated buffer
 int ErikSha256(unsigned char *inBuff, unsigned long inLenBits, unsigned char *outBuff) {
     unsigned long currInputLenBits = inLenBits;
     unsigned long numBlocks;
@@ -73,6 +77,7 @@ int ErikSha256(unsigned char *inBuff, unsigned long inLenBits, unsigned char *ou
     return 0;
 }
 
+// Function for executing sha256 compression function
 void CompressFuncSha256(unsigned int workingVars[8], unsigned int messageSchedule[64]) {
     unsigned int index, innerIndex;
     unsigned int T1 = 0, T2 = 0;
@@ -108,6 +113,7 @@ void CompressFuncSha256(unsigned int workingVars[8], unsigned int messageSchedul
     }
 }
 
+// Function for generating message schedule for sha256
 int GenMessageScheduleSha256(unsigned char *inputBlock, unsigned int messageSchedule[64]) {
     unsigned int index, offset;
     unsigned int bigEndianWord = 0;
@@ -138,7 +144,7 @@ int GenMessageScheduleSha256(unsigned char *inputBlock, unsigned int messageSche
     return 0;
 }
 
-// Implicit length limit of 2^32 thanks to unsigned int type
+// Function for padding an input to sha256
 int PadInputSha256(unsigned char **inBuff, unsigned long *inLenBitsPtr) {
     unsigned char *oldInput;
     unsigned char *input = (*inBuff);
@@ -187,6 +193,7 @@ int PadInputSha256(unsigned char **inBuff, unsigned long *inLenBitsPtr) {
     return 0;
 }
 
+// Function to flip the endianness of a buffer based on 32b words
 int EndiannessConvertWordSha256(unsigned char *buff, unsigned long numBits) {
     unsigned long numWords = (numBits / 32);
     unsigned int index;
@@ -209,11 +216,14 @@ int EndiannessConvertWordSha256(unsigned char *buff, unsigned long numBits) {
     return 0;
 }
 
+// Function to calculate the total Sha256 padded length for a given input length
 unsigned int CalcPadBitLenSha256(unsigned long currLen) {
     unsigned int numZeroes = CalcNumPadZeroesSha256(currLen);
     currLen = currLen + 1 + numZeroes + 64;
     return currLen;
 }
+
+// Function to calculate the number of zeros needed to pad an specific input to sha256
 unsigned int CalcNumPadZeroesSha256(unsigned long currLen) {
     unsigned int modulus = SHA256_BLOCK_SIZE_BITS;
     unsigned int totalOnes = 0;
@@ -230,6 +240,8 @@ unsigned int CalcNumPadZeroesSha256(unsigned long currLen) {
 
     return totalOnes;
 }
+
+// Functon to dump a buffer in 32b hex words
 void DumpHexString(unsigned char *input, unsigned long inLenBits) {
     unsigned int index;
     unsigned int loopLim = (inLenBits / (sizeof(unsigned int)*8));
@@ -243,6 +255,7 @@ void DumpHexString(unsigned char *input, unsigned long inLenBits) {
     }
 }
 
+// Function to dump a buffer in hex byte by bytes
 void DumpHexStringBytes(unsigned char *input, unsigned long inLenBits) {
     unsigned int index;
     unsigned long loopLim = (inLenBits / 8) + ((inLenBits % 8) ? 1 : 0);

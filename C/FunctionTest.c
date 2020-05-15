@@ -5,14 +5,17 @@
 
 #include "Crypto.h"
 
+// Pick an arbitrary max vector length for read in test vectors
 #define MAX_VECTOR_BYTE_LEN   2048
 
+// Function that prints a uniform error message for Sha256 errors
 void PrintRegressErrorSha256(void) {
   fprintf(stderr, "ERROR - SHA256: invalid test vector file provided to regression.\n"); 
   fprintf(stderr, "The file must contain pairs of lines where the first line is an input string within double quotes");
   fprintf(stderr, "and the second line is a hex string that is exactly 64 characters long.\n");
 }
 
+// Function that prints a result for a given regression test
 int PrintRegressResult(unsigned char *input, unsigned char *output, unsigned char *expected) {
   unsigned int expectedSize = strlen((const char *)expected);
   unsigned int result = 0, index;
@@ -42,6 +45,7 @@ int PrintRegressResult(unsigned char *input, unsigned char *output, unsigned cha
   return ret;
 }
 
+// Regression test top level function for sha256
 void RegressionSha256(FILE *testVecFile) {
   unsigned char line[(MAX_VECTOR_BYTE_LEN+1)], *input, *output, *targetOutput;
   unsigned int dataRead = 0;
@@ -108,12 +112,14 @@ void RegressionSha256(FILE *testVecFile) {
   free(output); output = NULL;
 }
 
+// Simple help menu for a user
 void PrintHelp(void) {
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, " -s <filename>: run sha256 regression\n");
   fprintf(stderr, " -h: print help menu\n");
 }
 
+// Main function
 int main(int argc, char *argv[]) {
   int c;
   FILE *testFile;
