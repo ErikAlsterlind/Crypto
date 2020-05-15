@@ -26,8 +26,6 @@ int PrintRegressResult(unsigned char *input, unsigned char *output, unsigned cha
     return 1;
   }
 
-  // Converting real output to hex digits to compare to expected
-  BigEndianConvertSha256(output, SHA256_OUTPUT_BITS);
   for (index = 0; index < SHA256_OUTPUT_BYTES; index++) {
     sprintf((char *)(outputHex + (2*index)), "%02x", output[index]);
   }

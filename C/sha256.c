@@ -67,6 +67,7 @@ int ErikSha256(unsigned char *inBuff, unsigned long inLenBits, unsigned char *ou
     for (index = 0; index < 8; index++) {
         memcpy(outBuff+(index*4), &currHash[index], sizeof(unsigned int));
     }
+    BigEndianConvertSha256(outBuff, SHA256_OUTPUT_BITS);
     free(input); input = NULL;
 
     return 0;
