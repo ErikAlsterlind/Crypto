@@ -36,6 +36,6 @@ unsigned int CalcPadBitLenSha256(unsigned long currLen);
 unsigned int CalcNumPadZeroesSha256(unsigned long currLen);
 void DumpHexString(unsigned char *input, unsigned long inLenBits);
 void DumpHexStringBytes(unsigned char *input, unsigned long inLenBits);
-int BigEndianConvertSha256(unsigned char *buff, unsigned long numBits);
+int EndiannessConvertWordSha256(unsigned char *buff, unsigned long numBits);
 
 #endif

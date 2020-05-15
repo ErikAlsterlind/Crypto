@@ -67,7 +67,7 @@ int ErikSha256(unsigned char *inBuff, unsigned long inLenBits, unsigned char *ou
     for (index = 0; index < 8; index++) {
         memcpy(outBuff+(index*4), &currHash[index], sizeof(unsigned int));
     }
-    BigEndianConvertSha256(outBuff, SHA256_OUTPUT_BITS);
+    EndiannessConvertWordSha256(outBuff, SHA256_OUTPUT_BITS);
     free(input); input = NULL;
 
     return 0;
@@ -175,7 +175,7 @@ int PadInputSha256(unsigned char **inBuff, unsigned long *inLenBitsPtr) {
     input[(newLenBits / 8)] |= (0x80 >> (newLenBits % 8));
     newLenBits = newLenBits + 1 + numZeroes;
 
-    if (BigEndianConvertSha256(input, newLenBits)) {
+    if (EndiannessConvertWordSha256(input, newLenBits)) {
         return ERR_SHA256_BIGENDCONV;
     }
 
@@ -187,13 +187,13 @@ int PadInputSha256(unsigned char **inBuff, unsigned long *inLenBitsPtr) {
     return 0;
 }
 
-int BigEndianConvertSha256(unsigned char *buff, unsigned long numBits) {
+int EndiannessConvertWordSha256(unsigned char *buff, unsigned long numBits) {
     unsigned long numWords = (numBits / 32);
     unsigned int index;
     unsigned char hold;
 
     if ((numBits % 32)) {
-        fprintf(stderr, "ERROR - SHA256: BigEndianConvert expects a bit length that is a multiple of 32, found %lu\n", numBits);
+        fprintf(stderr, "ERROR - SHA256: EndiannessConvertWordSha256 expects a bit length that is a multiple of 32, found %lu\n", numBits);
         return ERR_SHA256_BIGENDCONV;
     }
 

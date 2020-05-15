@@ -9,7 +9,7 @@
 
 void PrintRegressErrorSha256(void) {
   fprintf(stderr, "ERROR - SHA256: invalid test vector file provided to regression.\n"); 
-  fprintf(stderr, "The file must contain pairs of lines where the first line is an input string");
+  fprintf(stderr, "The file must contain pairs of lines where the first line is an input string within double quotes");
   fprintf(stderr, "and the second line is a hex string that is exactly 64 characters long.\n");
 }
 
@@ -62,12 +62,22 @@ void RegressionSha256(FILE *testVecFile) {
       free(output); output = NULL;
       break;
     }
+    // Get rid of newline on input line when copying
     line[dataRead-1] = 0x0;
     dataRead--;
 
+    // Make sure input line is within double quotes
+    if ((line[0] != '"') || (line[dataRead-1] != '"')) {
+      PrintRegressErrorSha256();
+      free(output); output = NULL;
+      break;
+    }
+    // Adjust length to ignore quotes
+    dataRead -= 2;
+
     inLenBits = dataRead * 8;
     input = calloc(dataRead + 1, sizeof(unsigned char));
-    memcpy(input, line, dataRead);
+    memcpy(input, line+1, dataRead);
 
     if(!fgets((char *)line, MAX_VECTOR_BYTE_LEN, testVecFile)) {
       PrintRegressErrorSha256();
@@ -107,20 +117,31 @@ void PrintHelp(void) {
 int main(int argc, char *argv[]) {
   int c;
   FILE *testFile;
-  unsigned int sha256Flag = 0;
+  unsigned int inLenBits = 0;
+  unsigned int sha256RegressFlag = 0;
+  unsigned int sha256GenFlag = 0;
   unsigned char *sha256File;
-  unsigned char outBuff[SHA256_OUTPUT_BYTES];
+  unsigned char *inputStr;
+  unsigned char outputsha256[SHA256_OUTPUT_BYTES+1] = {0};
 
   if (sizeof(unsigned long) != 8) {
     fprintf(stderr, "WARNING - SHA256: unsigned long is %lu bytes instead of expected 8. The max input length is affected.\n", sizeof(unsigned long));
   }
 
-  while ((c = getopt (argc, argv, "s:h")) != -1) {
+  while ((c = getopt (argc, argv, "s:g:h")) != -1) {
     switch (c)
       {
       case 's':
-        sha256Flag = 1;
+        sha256RegressFlag = 1;
         sha256File = (unsigned char *)optarg;
+        break;
+      case 'g':
+        sha256GenFlag = 1;
+        if (!(inputStr = calloc(strlen(optarg), sizeof(unsigned char)))) {
+          fprintf(stderr, "WARNING - SHA256: unable to generate buffer for sha256 generate case.\n");
+          return 1;
+        }
+        memcpy(inputStr, optarg, strlen(optarg));
         break;
       case 'h':
         PrintHelp();
@@ -130,13 +151,20 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  if (sha256Flag) {
+  if (sha256RegressFlag) {
     if (!(testFile = fopen((const char *)sha256File, "r"))) {
       fprintf(stderr, "ERROR - SHA256: Unable to open provided test vector file %s.\n", sha256File);
       return 1;
     }
     RegressionSha256(testFile);
     fclose(testFile);
+  }
+
+  if (sha256GenFlag) {
+    inLenBits = strlen((const char *)inputStr) * 8;
+    ErikSha256(inputStr, inLenBits, outputsha256);
+    //DumpHexString((unsigned char *)outputsha256, SHA256_OUTPUT_BITS);
+    free(inputStr);
   }
 
   return 0;
