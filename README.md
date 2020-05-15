@@ -1,4 +1,4 @@
-#Crypto
+# Crypto
 Repository for playing around with cryptography primitives.
 
 Contents as of May 15th, 2020:
