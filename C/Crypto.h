@@ -3,6 +3,7 @@
 
 enum algorithm {
   SHA256 = 1,
+  CHACHA20,
 };
 
 // SHA256
@@ -37,5 +38,17 @@ unsigned int CalcNumPadZeroesSha256(unsigned long currLen);
 void DumpHexString(unsigned char *input, unsigned long inLenBits);
 void DumpHexStringBytes(unsigned char *input, unsigned long inLenBits);
 int EndiannessConvertWordSha256(unsigned char *buff, unsigned long numBits);
+
+// ChaCha20
+#define CHACHA_KEY_SIZE_BITS      256
+#define CHACHA_KEY_SIZE_BYTES     (CHACHA20_KEYSIZE_BITS / 8)
+#define CHACHA_NONCE_SIZE_BITS    96
+#define CHACHA_NONCE_SIZE_BYTES   (CHACHA20_NONCESIZE_BITS / 8)
+#define CHACHA_STATE_SIZE         16
+
+void ChaCha20Block(unsigned char *key, unsigned char *nonce, uint32_t blockCount, unsigned char *output);
+void ChaChaInitBlockState(uint32_t *state, unsigned char *key, unsigned char *nonce, uint32_t blockCount);
+void ChaChaQuartRound(uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d);
+void PrintChaCha20State(uint32_t *state);
 
 #endif

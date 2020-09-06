@@ -1,5 +1,5 @@
 CC=gcc
-SRC=FunctionTest.c sha256.c
+SRC=FunctionTest.c sha256.c ChaChaPoly.c
 OUT=CryptoTestC
 
 all: FunctionTest.c

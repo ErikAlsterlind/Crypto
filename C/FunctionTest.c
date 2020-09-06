@@ -112,9 +112,21 @@ void RegressionSha256(FILE *testVecFile) {
   free(output); output = NULL;
 }
 
+void ChaCha20Test(void) {
+  uint32_t state[16] = {0x879531e0, 0xc5ecf37d, 0x516461b1, 0xc9a62f8a,
+                        0x44c20ef3, 0x3390af7f, 0xd9fc690b, 0x2a5f714c,
+                        0x53372767, 0xb00a5631, 0x974c541a, 0x359e9963,
+                        0x5c971061, 0x3d631689, 0x2098d9d6, 0x91dbd320};
+  PrintChaCha20State(state);
+  ChaChaQuartRound(&state[2], &state[7], &state[8], &state[13]);
+  PrintChaCha20State(state);
+}
+
 // Simple help menu for a user
 void PrintHelp(void) {
   fprintf(stderr, "Usage:\n");
+  fprintf(stderr, " -c: ChaCha20 test>\n");
+  fprintf(stderr, " -g <string>: generate sha256 hash of <string>\n");
   fprintf(stderr, " -s <filename>: run sha256 regression\n");
   fprintf(stderr, " -h: print help menu\n");
 }
@@ -134,9 +146,12 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "WARNING - SHA256: unsigned long is %lu bytes instead of expected 8. The max input length is affected.\n", sizeof(unsigned long));
   }
 
-  while ((c = getopt (argc, argv, "s:g:h")) != -1) {
+  while ((c = getopt (argc, argv, "s:g:ch")) != -1) {
     switch (c)
       {
+      case 'c':
+        ChaCha20Test();
+        break;
       case 's':
         sha256RegressFlag = 1;
         sha256File = (unsigned char *)optarg;
@@ -169,7 +184,7 @@ int main(int argc, char *argv[]) {
   if (sha256GenFlag) {
     inLenBits = strlen((const char *)inputStr) * 8;
     ErikSha256(inputStr, inLenBits, outputsha256);
-    //DumpHexString((unsigned char *)outputsha256, SHA256_OUTPUT_BITS);
+    DumpHexString((unsigned char *)outputsha256, SHA256_OUTPUT_BITS);
     free(inputStr);
   }
 
