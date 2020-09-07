@@ -41,14 +41,17 @@ int EndiannessConvertWordSha256(unsigned char *buff, unsigned long numBits);
 
 // ChaCha20
 #define CHACHA_KEY_SIZE_BITS      256
-#define CHACHA_KEY_SIZE_BYTES     (CHACHA20_KEYSIZE_BITS / 8)
+#define CHACHA_KEY_SIZE_BYTES     (CHACHA_KEY_SIZE_BITS / 8)
 #define CHACHA_NONCE_SIZE_BITS    96
-#define CHACHA_NONCE_SIZE_BYTES   (CHACHA20_NONCESIZE_BITS / 8)
+#define CHACHA_NONCE_SIZE_BYTES   (CHACHA_NONCE_SIZE_BITS / 8)
 #define CHACHA_STATE_SIZE         16
+
+#define ERR_CHACHA_MAIN           -2
 
 void ChaCha20Block(unsigned char *key, unsigned char *nonce, uint32_t blockCount, unsigned char *output);
 void ChaChaInitBlockState(uint32_t *state, unsigned char *key, unsigned char *nonce, uint32_t blockCount);
 void ChaChaQuartRound(uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d);
 void PrintChaCha20State(uint32_t *state);
+int ErikChaCha20Encrypt(unsigned char *input, unsigned char *key, unsigned char *nonce, uint32_t counter, unsigned char *output);
 
 #endif

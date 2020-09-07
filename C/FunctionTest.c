@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,8 +12,31 @@
 // Function that prints a uniform error message for Sha256 errors
 void PrintRegressErrorSha256(void) {
   fprintf(stderr, "ERROR - SHA256: invalid test vector file provided to regression.\n"); 
-  fprintf(stderr, "The file must contain pairs of lines where the first line is an input string within double quotes");
-  fprintf(stderr, "and the second line is a hex string that is exactly 64 characters long.\n");
+  fprintf(stderr, "The file must contain pairs of lines where the first line is an input string within double quotes\n");
+  fprintf(stderr, "and the second line is a hex string output that is exactly 64 characters long.\n");
+}
+
+// Function that prints a uniform error message for ChaCha20 errors
+void PrintRegressErrorChaCha20(void) {
+  fprintf(stderr, "ERROR - ChaCha20: invalid test vector file provided to regression.\n"); 
+  fprintf(stderr, "The file must contain a set of four lines where the first line is an input string within double quotes,\n");
+  fprintf(stderr, "the second line is a hex string key that is exactly 64 characters long, the third line is a hex string\n");
+  fprintf(stderr, "nonce that is exactly 24 characters long, and the fourth line is a hex string equal to the length of\n");
+  fprintf(stderr, "the first line's characters in quotes multiplied by two.\n");
+}
+
+// Check if a ASCII string is all hex characters
+int CheckHexString(unsigned char *input) {
+  int len = strlen((const char *)input);
+  int ind;
+
+  for (ind = 0; ind < len; ind++) {
+    if (!isxdigit(input[ind])) {
+      return 1;
+    }
+  }
+
+  return 0;
 }
 
 // Function that prints a result for a given regression test
@@ -122,6 +146,147 @@ void ChaCha20Test(void) {
   PrintChaCha20State(state);
 }
 
+// Regression test top level function for ChaCha20
+void RegressionChaCha20(FILE *testVecFile) {
+  unsigned char line[(MAX_VECTOR_BYTE_LEN+1)], *input, *output, *targetOutput, *key, *nonce, *expectedOutput;
+  unsigned char hexByte[3] = {0};
+  unsigned int dataRead = 0;
+  unsigned long inLenBits;
+  int totalFailures = 0, totalTests = 0, ind;
+  
+  fprintf(stderr, "--- ChaCha20 Regression Test ---\n");
+  while (fgets((char *)line, MAX_VECTOR_BYTE_LEN, testVecFile) != NULL) {
+    dataRead = strlen((const char *)line);
+    if (dataRead == 1) {
+      continue;
+    } else if (line[dataRead-1] != '\n') {
+      PrintRegressErrorChaCha20();
+      break;
+    }
+    // Get rid of newline on input line when copying
+    line[dataRead-1] = 0x0;
+    dataRead--;
+
+    // Input line processing
+    // Make sure input line is within double quotes
+    if ((line[0] != '"') || (line[dataRead-1] != '"')) {
+      PrintRegressErrorChaCha20();
+      break;
+    }
+    // Adjust length to ignore quotes
+    dataRead -= 2;
+    inLenBits = dataRead * 8;
+    if (!(input = calloc(dataRead + 1, sizeof(unsigned char)))) {
+      fprintf(stderr, "ERROR - ChaCha20 Regression: failed to allocate memory for input buffer. Regression will not run.\n");
+      return;
+    }
+    if (!(output = calloc(dataRead+1, sizeof(unsigned char)))) {
+    fprintf(stderr, "ERROR - ChaCha2 Regression: failed to allocate memory for output buffer. Regression will not run.\n");
+    return;
+    }
+    memcpy(input, line+1, dataRead);
+
+    // Key line processing
+    if(!fgets((char *)line, MAX_VECTOR_BYTE_LEN, testVecFile)) {
+      PrintRegressErrorChaCha20();
+      free(input); input = NULL;
+      free(output); output = NULL;
+      break;
+    }
+    dataRead = strlen((const char *)line);
+    if (line[dataRead-1] == '\n') {
+      line[dataRead-1] = 0x0;
+      dataRead--;
+    }
+    if ((dataRead != (CHACHA_KEY_SIZE_BYTES * 2)) || CheckHexString(line)) {
+      PrintRegressErrorChaCha20();
+      free(input); input = NULL;
+      free(output); output = NULL;
+      break;
+    }
+    if (!(key = calloc(CHACHA_KEY_SIZE_BYTES + 1, sizeof(unsigned char)))) {
+      fprintf(stderr, "ERROR - ChaCha20 Regression: failed to allocate memory for key buffer. Regression will not run.\n");
+      free(input); input = NULL;
+      free(output); output = NULL;
+      break;
+    }
+    for (ind = 0; ind < CHACHA_KEY_SIZE_BYTES; ind++) {
+      memcpy(hexByte, line+(2*ind), sizeof(unsigned char)*2);
+      key[ind] = strtoul((const char *)hexByte, NULL, 16);
+    }
+    
+    // Nonce line processing
+    if(!fgets((char *)line, MAX_VECTOR_BYTE_LEN, testVecFile)) {
+      PrintRegressErrorChaCha20();
+      free(input); input = NULL;
+      free(key); key = NULL;
+      free(output); output = NULL;
+      break;
+    }
+    dataRead = strlen((const char *)line);
+    if (line[dataRead-1] == '\n') {
+      line[dataRead-1] = 0x0;
+      dataRead--;
+    }
+    if ((dataRead != (CHACHA_NONCE_SIZE_BYTES * 2)) || CheckHexString(line)) {
+      PrintRegressErrorChaCha20();
+      free(input); input = NULL;
+      free(key); key = NULL;
+      free(output); output = NULL;
+      break;
+    }
+    if (!(nonce = calloc(dataRead + 1, sizeof(unsigned char)))) {
+      fprintf(stderr, "ERROR - ChaCha20 Regression: failed to allocate memory for nonce buffer. Regression will not run.\n");
+      free(input); input = NULL;
+      free(key); key = NULL;
+      free(output); output = NULL;
+      break;
+    }
+    for (ind = 0; ind < CHACHA_NONCE_SIZE_BYTES; ind++) {
+      memcpy(hexByte, line+(2*ind), sizeof(unsigned char)*2);
+      nonce[ind] = strtoul((const char *)hexByte, NULL, 16);
+    }
+
+    // Output - Not used yet
+    if(!fgets((char *)line, MAX_VECTOR_BYTE_LEN, testVecFile)) {
+      PrintRegressErrorChaCha20();
+      free(input); input = NULL;
+      free(key); key = NULL;
+      free(nonce); nonce = NULL;
+      free(output); output = NULL;
+      break;
+    }
+    dataRead = strlen((const char *)line);
+    if (line[dataRead-1] == '\n') {
+      line[dataRead-1] = 0x0;
+      dataRead--;
+    }
+    if (!(expectedOutput = calloc(dataRead + 1, sizeof(unsigned char)))) {
+      fprintf(stderr, "ERROR - ChaCha20 Regression: failed to allocate memory for expected output buffer. Regression will not run.\n");
+      free(input); input = NULL;
+      free(key); key = NULL;
+      free(nonce); nonce = NULL;
+      free(output); output = NULL;
+      break;
+    }
+    //ChaCha20Block(key, nonce, 1, NULL);
+    ErikChaCha20Encrypt(input, key, nonce, 1, output);
+
+    //totalTests++;
+    free(input); input = NULL;
+    free(key); key = NULL;
+    free(nonce); nonce = NULL;
+    free(nonce); nonce = NULL;
+    free(output); output = NULL;
+    free(expectedOutput); expectedOutput = NULL;
+  }
+  /*fprintf(stderr, "--- Total Tests: %d ---\n", totalTests);
+  fprintf(stderr, "--- Total Successes: %d ---\n", totalTests - totalFailures);
+  fprintf(stderr, "--- Total Failures: %d ---\n", totalFailures);*/
+
+  //free(output); output = NULL;
+}
+
 // Simple help menu for a user
 void PrintHelp(void) {
   fprintf(stderr, "Usage:\n");
@@ -138,7 +303,9 @@ int main(int argc, char *argv[]) {
   unsigned int inLenBits = 0;
   unsigned int sha256RegressFlag = 0;
   unsigned int sha256GenFlag = 0;
+  unsigned int chacha20RegressFlag = 0;
   unsigned char *sha256File;
+  unsigned char *chacha20File;
   unsigned char *inputStr;
   unsigned char outputsha256[SHA256_OUTPUT_BYTES+1] = {0};
 
@@ -146,11 +313,13 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "WARNING - SHA256: unsigned long is %lu bytes instead of expected 8. The max input length is affected.\n", sizeof(unsigned long));
   }
 
-  while ((c = getopt (argc, argv, "s:g:ch")) != -1) {
+  while ((c = getopt (argc, argv, "s:g:c:h")) != -1) {
     switch (c)
       {
       case 'c':
-        ChaCha20Test();
+        //ChaCha20Test();
+        chacha20RegressFlag = 1;
+        chacha20File = (unsigned char *)optarg;
         break;
       case 's':
         sha256RegressFlag = 1;
@@ -178,6 +347,14 @@ int main(int argc, char *argv[]) {
       return 1;
     }
     RegressionSha256(testFile);
+    fclose(testFile);
+  }
+  if (chacha20RegressFlag) {
+    if (!(testFile = fopen((const char *)chacha20File, "r"))) {
+      fprintf(stderr, "ERROR - ChaCha20: Unable to open provided test vector file %s.\n", sha256File);
+      return 1;
+    }
+    RegressionChaCha20(testFile);
     fclose(testFile);
   }
 
