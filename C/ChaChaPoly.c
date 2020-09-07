@@ -71,8 +71,8 @@ void ChaCha20Block(unsigned char *key, unsigned char *nonce, uint32_t blockCount
     fprintf(stderr, "ERROR: output buffer passed to ChaCha20 Block function is NULL! The function will not be performed.\n");
     return;
   }
-
   ChaChaInitBlockState(state, key, nonce, blockCount);
+  PrintChaCha20State(state);
   ChaChaInitBlockState(stateResult, key, nonce, blockCount);
   for (ind = 0; ind < 10; ind++) {
     // Column Rounds
@@ -90,6 +90,7 @@ void ChaCha20Block(unsigned char *key, unsigned char *nonce, uint32_t blockCount
     stateResult[ind] += state[ind];
     memcpy(output+(ind*4), &stateResult[ind], sizeof(uint32_t));
   }
+  PrintChaCha20State(stateResult);
 }
 
 /* ChaCha20 Init State Function

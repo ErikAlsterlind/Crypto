@@ -35,12 +35,11 @@ int CheckHexString(unsigned char *input) {
       return 1;
     }
   }
-
   return 0;
 }
 
 // Function that prints a result for a given regression test
-int PrintRegressResult(unsigned char *input, unsigned char *output, unsigned char *expected) {
+int PrintRegressResultSha256(unsigned char *input, unsigned char *output, unsigned char *expected) {
   unsigned int expectedSize = strlen((const char *)expected);
   unsigned int result = 0, index;
   unsigned char outputHex[65] = {0};
@@ -123,7 +122,7 @@ void RegressionSha256(FILE *testVecFile) {
     targetOutput = calloc(dataRead + 1, sizeof(unsigned char));
     memcpy(targetOutput, line, dataRead);
     if (!ErikSha256(input, inLenBits, output)) {
-      totalFailures += PrintRegressResult(input, output, targetOutput);
+      totalFailures += PrintRegressResultSha256(input, output, targetOutput);
     }
     totalTests++;
     free(input); input = NULL;
@@ -247,7 +246,7 @@ void RegressionChaCha20(FILE *testVecFile) {
       nonce[ind] = strtoul((const char *)hexByte, NULL, 16);
     }
 
-    // Output - Not used yet
+    // Output line processing
     if(!fgets((char *)line, MAX_VECTOR_BYTE_LEN, testVecFile)) {
       PrintRegressErrorChaCha20();
       free(input); input = NULL;
