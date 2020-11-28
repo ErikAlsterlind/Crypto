@@ -150,7 +150,7 @@ void RegressionChaCha20(FILE *testVecFile) {
   unsigned char line[(MAX_VECTOR_BYTE_LEN+1)], *input, *output, *targetOutput, *key, *nonce, *expectedOutput;
   unsigned char hexByte[3] = {0};
   unsigned int dataRead = 0;
-  unsigned long inLenBits;
+  unsigned long inLenBits, outLenBytes;
   int totalFailures = 0, totalTests = 0, ind;
   
   fprintf(stderr, "--- ChaCha20 Regression Test ---\n");
@@ -255,11 +255,22 @@ void RegressionChaCha20(FILE *testVecFile) {
       free(output); output = NULL;
       break;
     }
+
     dataRead = strlen((const char *)line);
     if (line[dataRead-1] == '\n') {
       line[dataRead-1] = 0x0;
       dataRead--;
     }
+
+    if (CheckHexString(line) || (dataRead % 2)) {
+      fprintf(stderr, "ERROR - invalid expected output line of text vector %d. Must be a even numbered string of hex characters.\n", totalTests);
+      free(input); input = NULL;
+      free(key); key = NULL;
+      free(nonce); nonce = NULL;
+      free(output); output = NULL;
+      break;
+    }
+
     if (!(expectedOutput = calloc(dataRead + 1, sizeof(unsigned char)))) {
       fprintf(stderr, "ERROR - ChaCha20 Regression: failed to allocate memory for expected output buffer. Regression will not run.\n");
       free(input); input = NULL;
@@ -268,9 +279,19 @@ void RegressionChaCha20(FILE *testVecFile) {
       free(output); output = NULL;
       break;
     }
+    outLenBytes = dataRead / 2;
+    for (ind = 0; ind < outLenBytes; ind++) {
+      memcpy(hexByte, line+(2*ind), sizeof(unsigned char)*2);
+      expectedOutput[ind] = strtoul((const char *)hexByte, NULL, 16);
+    }
     ErikChaCha20Encrypt(input, key, nonce, 1, output);
 
-    //totalTests++;
+    /* Compared the output to expected output for result.*/
+    if (memcmp(output, expectedOutput, outLenBytes)) {
+      totalFailures++;
+    }
+
+    totalTests++;
     free(input); input = NULL;
     free(key); key = NULL;
     free(nonce); nonce = NULL;
@@ -278,11 +299,9 @@ void RegressionChaCha20(FILE *testVecFile) {
     free(output); output = NULL;
     free(expectedOutput); expectedOutput = NULL;
   }
-  /*fprintf(stderr, "--- Total Tests: %d ---\n", totalTests);
+  fprintf(stderr, "--- Total Tests: %d ---\n", totalTests);
   fprintf(stderr, "--- Total Successes: %d ---\n", totalTests - totalFailures);
-  fprintf(stderr, "--- Total Failures: %d ---\n", totalFailures);*/
-
-  //free(output); output = NULL;
+  fprintf(stderr, "--- Total Failures: %d ---\n", totalFailures);
 }
 
 // Simple help menu for a user

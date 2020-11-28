@@ -31,15 +31,16 @@ int ErikChaCha20Encrypt(unsigned char *input, unsigned char *key, unsigned char 
     fprintf(stderr, "ERROR - CHACHA20: invalid input to top level function.\n");
     return ERR_CHACHA_MAIN;
   }
-
+  /*
   fprintf(stderr, "input: %s\n", input);
   fprintf(stderr, "key: %s\n", key);
   fprintf(stderr, "nonce: %s\n", nonce);
   fprintf(stderr, "counter: %d\n", counter);
+  */
 
   inputLen = strlen((const char *)input);
   totalBlocks = (inputLen / 64) + (!(inputLen % 64) ? 0 : 1);
-  fprintf(stderr, "Total Blocks: %d\n", totalBlocks);
+  //fprintf(stderr, "Total Blocks: %d\n", totalBlocks);
   if (!(tempOutput = calloc((totalBlocks*64)+1, sizeof(unsigned char *)))) {
     fprintf(stderr, "ERROR - CHACHA20: calloc failed to allocate a buffer.\n");
     return ERR_ALLOC;
@@ -48,16 +49,17 @@ int ErikChaCha20Encrypt(unsigned char *input, unsigned char *key, unsigned char 
 
   for (ind = 0; ind < totalBlocks; ind++) {
     ChaCha20Block(key, nonce, counter+ind, keyStream);
-    fprintf(stderr, "Keystream %d:\n", ind);
+    /*fprintf(stderr, "Keystream %d:\n", ind);
     PrintBinAsHex(keyStream);
     fprintf(stderr, "\n");
+    */
     for (innerInd = 0; innerInd < 64; innerInd++) {
       tempOutput[(64*ind)+innerInd] ^= keyStream[innerInd];
     }
     memset(keyStream, 0, 64);
   }
   memcpy(output, tempOutput, inputLen);
-  PrintBinAsHex(output);
+  //PrintBinAsHex(output);
 
   return 0;
 }
@@ -72,7 +74,7 @@ void ChaCha20Block(unsigned char *key, unsigned char *nonce, uint32_t blockCount
     return;
   }
   ChaChaInitBlockState(state, key, nonce, blockCount);
-  PrintChaCha20State(state);
+  //PrintChaCha20State(state);
   ChaChaInitBlockState(stateResult, key, nonce, blockCount);
   for (ind = 0; ind < 10; ind++) {
     // Column Rounds
@@ -90,7 +92,7 @@ void ChaCha20Block(unsigned char *key, unsigned char *nonce, uint32_t blockCount
     stateResult[ind] += state[ind];
     memcpy(output+(ind*4), &stateResult[ind], sizeof(uint32_t));
   }
-  PrintChaCha20State(stateResult);
+  //PrintChaCha20State(stateResult);
 }
 
 /* ChaCha20 Init State Function
