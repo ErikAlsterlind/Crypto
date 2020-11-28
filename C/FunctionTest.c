@@ -19,8 +19,8 @@ void PrintRegressErrorSha256(void) {
 // Function that prints a uniform error message for ChaCha20 errors
 void PrintRegressErrorChaCha20(void) {
   fprintf(stderr, "ERROR - ChaCha20: invalid test vector file provided to regression.\n"); 
-  fprintf(stderr, "The file must contain a set of five lines where the first line is an input ascii string within double quotes,\n");
-  fprintf(stderr, "the second line is a hex string key that is exactly 64 characters long, the third line is a hex string\n");
+  fprintf(stderr, "The file must contain a set of five lines where the first line is either an input ascii string within double quotes or\n"); 
+  fprintf(stderr, "an input hex string, the second line is a hex string key that is exactly 64 characters long, the third line is a hex string\n");
   fprintf(stderr, "nonce that is exactly 24 characters long, the fourth line is the decimal initial block counter\n");
   fprintf(stderr, "and the fifth line is a hex string equal to the length of the first line's characters in quotes multiplied by two.\n");
 }
@@ -167,23 +167,40 @@ void RegressionChaCha20(FILE *testVecFile) {
     dataRead--;
 
     // Input line processing
-    // Make sure input line is within double quotes
-    if ((line[0] != '"') || (line[dataRead-1] != '"')) {
+    // Make sure input line is ascii within double quotes or an even sized hex string
+    if ((line[0] == '"') || (line[dataRead-1] == '"')) {
+      // Adjust length to ignore quotes
+      dataRead -= 2;
+      inLenBits = dataRead * 8;
+      if (!(input = calloc(dataRead + 1, sizeof(unsigned char)))) {
+        fprintf(stderr, "ERROR - ChaCha20 Regression: failed to allocate memory for input buffer. Regression will not run.\n");
+        return;
+      }
+      if (!(output = calloc(dataRead+1, sizeof(unsigned char)))) {
+        free(input);
+        fprintf(stderr, "ERROR - ChaCha2 Regression: failed to allocate memory for output buffer. Regression will not run.\n");
+        return;
+      }
+      memcpy(input, line+1, dataRead);
+    } else if (!(dataRead % 2) && !CheckHexString(line)) {
+      inLenBits = dataRead * 4;
+      if (!(input = calloc((dataRead/2) + 1, sizeof(unsigned char)))) {
+        fprintf(stderr, "ERROR - ChaCha20 Regression: failed to allocate memory for input buffer. Regression will not run.\n");
+        return;
+      }
+      if (!(output = calloc((dataRead/2)+1, sizeof(unsigned char)))) {
+        free(input);
+        fprintf(stderr, "ERROR - ChaCha2 Regression: failed to allocate memory for output buffer. Regression will not run.\n");
+        return;
+      }
+      for (ind = 0; ind < dataRead/2; ind++) {
+        memcpy(hexByte, line+(2*ind), sizeof(unsigned char)*2);
+        input[ind] = strtoul((const char *)hexByte, NULL, 16);
+      } 
+    } else {
       PrintRegressErrorChaCha20();
       break;
     }
-    // Adjust length to ignore quotes
-    dataRead -= 2;
-    inLenBits = dataRead * 8;
-    if (!(input = calloc(dataRead + 1, sizeof(unsigned char)))) {
-      fprintf(stderr, "ERROR - ChaCha20 Regression: failed to allocate memory for input buffer. Regression will not run.\n");
-      return;
-    }
-    if (!(output = calloc(dataRead+1, sizeof(unsigned char)))) {
-    fprintf(stderr, "ERROR - ChaCha2 Regression: failed to allocate memory for output buffer. Regression will not run.\n");
-    return;
-    }
-    memcpy(input, line+1, dataRead);
 
     // Key line processing
     if(!fgets((char *)line, MAX_VECTOR_BYTE_LEN, testVecFile)) {
@@ -300,13 +317,17 @@ void RegressionChaCha20(FILE *testVecFile) {
 
     // Perform Encryption
     ErikChaCha20Encrypt(input, key, nonce, blockCounter, output);
-    for (ind = 0; ind < outLenBytes; ind++) {
-      if (output[ind] != expectedOutput[ind]) {
-        fprintf(stderr, "%d: expected %02x, output: %02x, delta: %02x\n", ind, expectedOutput[ind], output[ind], expectedOutput[ind]^output[ind]);
-      }
-    }
-    /* Compared the output to expected output for result.*/
+    
+    /* Compared the output to expected output for result and report failures.*/
     if (memcmp(output, expectedOutput, outLenBytes)) {
+      fprintf(stderr, "- TEST %d FAILED\n", totalTests);
+      fprintf(stderr, "   - Differences:\n");
+      for (ind=0; ind < outLenBytes; ind++) {
+        if (expectedOutput[ind] != output[ind]) {
+          fprintf(stderr, "       - index %d, expected 0x%02x, received 0x%02x, delta 0x%02x\n", 
+                      ind, expectedOutput[ind], output[ind], expectedOutput[ind]^output[ind]);
+        }
+      }
       totalFailures++;
     }
 
