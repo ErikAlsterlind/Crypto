@@ -246,7 +246,7 @@ void RegressionChaCha20(FILE *testVecFile) {
       nonce[ind] = strtoul((const char *)hexByte, NULL, 16);
     }
 
-    // Output line processing
+    // Expected output line processing
     if(!fgets((char *)line, MAX_VECTOR_BYTE_LEN, testVecFile)) {
       PrintRegressErrorChaCha20();
       free(input); input = NULL;
@@ -268,7 +268,6 @@ void RegressionChaCha20(FILE *testVecFile) {
       free(output); output = NULL;
       break;
     }
-    //ChaCha20Block(key, nonce, 1, NULL);
     ErikChaCha20Encrypt(input, key, nonce, 1, output);
 
     //totalTests++;
@@ -289,7 +288,7 @@ void RegressionChaCha20(FILE *testVecFile) {
 // Simple help menu for a user
 void PrintHelp(void) {
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, " -c: ChaCha20 test>\n");
+  fprintf(stderr, " -c <filename>: run ChaCha20 regression>\n");
   fprintf(stderr, " -g <string>: generate sha256 hash of <string>\n");
   fprintf(stderr, " -s <filename>: run sha256 regression\n");
   fprintf(stderr, " -h: print help menu\n");
@@ -310,6 +309,11 @@ int main(int argc, char *argv[]) {
 
   if (sizeof(unsigned long) != 8) {
     fprintf(stderr, "WARNING - SHA256: unsigned long is %lu bytes instead of expected 8. The max input length is affected.\n", sizeof(unsigned long));
+  }
+
+  if (argc == 1) {
+      PrintHelp();
+      return 0;
   }
 
   while ((c = getopt (argc, argv, "s:g:c:h")) != -1) {
@@ -348,6 +352,7 @@ int main(int argc, char *argv[]) {
     RegressionSha256(testFile);
     fclose(testFile);
   }
+
   if (chacha20RegressFlag) {
     if (!(testFile = fopen((const char *)chacha20File, "r"))) {
       fprintf(stderr, "ERROR - ChaCha20: Unable to open provided test vector file %s.\n", sha256File);
@@ -356,7 +361,6 @@ int main(int argc, char *argv[]) {
     RegressionChaCha20(testFile);
     fclose(testFile);
   }
-
   if (sha256GenFlag) {
     inLenBits = strlen((const char *)inputStr) * 8;
     ErikSha256(inputStr, inLenBits, outputsha256);
