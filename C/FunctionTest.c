@@ -150,7 +150,7 @@ void RegressionChaCha20(FILE *testVecFile) {
   unsigned char line[(MAX_VECTOR_BYTE_LEN+1)], *input, *output, *targetOutput, *key, *nonce, *expectedOutput;
   unsigned char hexByte[3] = {0};
   unsigned int dataRead = 0, blockCounter = 1;
-  unsigned long inLenBits, outLenBytes;
+  unsigned long inLenBytes, outLenBytes;
   int totalFailures = 0, totalTests = 0, ind;
   
   fprintf(stderr, "--- ChaCha20 Regression Test ---\n");
@@ -171,7 +171,7 @@ void RegressionChaCha20(FILE *testVecFile) {
     if ((line[0] == '"') || (line[dataRead-1] == '"')) {
       // Adjust length to ignore quotes
       dataRead -= 2;
-      inLenBits = dataRead * 8;
+      inLenBytes = dataRead;
       if (!(input = calloc(dataRead + 1, sizeof(unsigned char)))) {
         fprintf(stderr, "ERROR - ChaCha20 Regression: failed to allocate memory for input buffer. Regression will not run.\n");
         return;
@@ -183,7 +183,7 @@ void RegressionChaCha20(FILE *testVecFile) {
       }
       memcpy(input, line+1, dataRead);
     } else if (!(dataRead % 2) && !CheckHexString(line)) {
-      inLenBits = dataRead * 4;
+      inLenBytes = dataRead/2;
       if (!(input = calloc((dataRead/2) + 1, sizeof(unsigned char)))) {
         fprintf(stderr, "ERROR - ChaCha20 Regression: failed to allocate memory for input buffer. Regression will not run.\n");
         return;
@@ -293,7 +293,7 @@ void RegressionChaCha20(FILE *testVecFile) {
       dataRead--;
     }
     outLenBytes = dataRead / 2;
-    if (CheckHexString(line) || (dataRead % 2) || ((inLenBits/8) != outLenBytes)) {
+    if (CheckHexString(line) || (dataRead % 2) || (inLenBytes != outLenBytes)) {
       fprintf(stderr, "ERROR - invalid expected output line of text vector %d. Must be a even numbered string of hex characters double the length of the input ascii string.\n", totalTests);
       free(input); input = NULL;
       free(key); key = NULL;
@@ -316,7 +316,7 @@ void RegressionChaCha20(FILE *testVecFile) {
     }
 
     // Perform Encryption
-    ErikChaCha20Encrypt(input, key, nonce, blockCounter, output);
+    ErikChaCha20Encrypt(input, inLenBytes, key, nonce, blockCounter, output);
     
     /* Compared the output to expected output for result and report failures.*/
     if (memcmp(output, expectedOutput, outLenBytes)) {

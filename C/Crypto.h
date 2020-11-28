@@ -52,6 +52,6 @@ void ChaCha20Block(unsigned char *key, unsigned char *nonce, uint32_t blockCount
 void ChaChaInitBlockState(uint32_t *state, unsigned char *key, unsigned char *nonce, uint32_t blockCount);
 void ChaChaQuartRound(uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d);
 void PrintChaCha20State(uint32_t *state);
-int ErikChaCha20Encrypt(unsigned char *input, unsigned char *key, unsigned char *nonce, uint32_t counter, unsigned char *output);
+int ErikChaCha20Encrypt(unsigned char *input, unsigned int inLen, unsigned char *key, unsigned char *nonce, uint32_t counter, unsigned char *output);
 
 #endif

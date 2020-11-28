@@ -20,7 +20,7 @@ void PrintBinAsHex(unsigned char *input, unsigned int strLength) {
 
 /*  ChaCha20 encryption function
  */
-int ErikChaCha20Encrypt(unsigned char *input, unsigned char *key, unsigned char *nonce, uint32_t counter, unsigned char *output) {
+int ErikChaCha20Encrypt(unsigned char *input, unsigned int inLen, unsigned char *key, unsigned char *nonce, uint32_t counter, unsigned char *output) {
   unsigned int inputLen = 0, totalBlocks = 0;
   unsigned int ind = 0, innerInd = 0;
   unsigned char keyStream[65] = {0};
@@ -31,7 +31,7 @@ int ErikChaCha20Encrypt(unsigned char *input, unsigned char *key, unsigned char 
     return ERR_CHACHA_MAIN;
   }
   
-  inputLen = strlen((const char *)input);
+  inputLen = inLen;
   totalBlocks = (inputLen / 64) + (!(inputLen % 64) ? 0 : 1);
   if (!(tempOutput = calloc((totalBlocks*64)+1, sizeof(unsigned char *)))) {
     fprintf(stderr, "ERROR - CHACHA20: calloc failed to allocate a buffer.\n");
