@@ -19,7 +19,6 @@ void PrintBinAsHex(unsigned char *input) {
 }
 
 /*  ChaCha20 encryption function - TESTING
- *  Allowing for any counter here but the expectation is 0 or 1 will be used for testing.
  */
 int ErikChaCha20Encrypt(unsigned char *input, unsigned char *key, unsigned char *nonce, uint32_t counter, unsigned char *output) {
   unsigned int inputLen = 0, totalBlocks = 0;
@@ -31,13 +30,12 @@ int ErikChaCha20Encrypt(unsigned char *input, unsigned char *key, unsigned char 
     fprintf(stderr, "ERROR - CHACHA20: invalid input to top level function.\n");
     return ERR_CHACHA_MAIN;
   }
-  /*
-  fprintf(stderr, "input: %s\n", input);
+  
+  /*fprintf(stderr, "input: %s\n", input);
   fprintf(stderr, "key: %s\n", key);
   fprintf(stderr, "nonce: %s\n", nonce);
   fprintf(stderr, "counter: %d\n", counter);
   */
-
   inputLen = strlen((const char *)input);
   totalBlocks = (inputLen / 64) + (!(inputLen % 64) ? 0 : 1);
   //fprintf(stderr, "Total Blocks: %d\n", totalBlocks);
@@ -111,6 +109,7 @@ void ChaChaInitBlockState(uint32_t *state, unsigned char *key, unsigned char *no
   for (ind = 0; ind < 3; ind++) {
     memcpy(&state[13+ind], (nonce+(4*ind)), sizeof(uint32_t));
   }
+  //PrintChaCha20State(state);
 }
 
 /* Quarter Round Function

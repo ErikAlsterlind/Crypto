@@ -19,10 +19,10 @@ void PrintRegressErrorSha256(void) {
 // Function that prints a uniform error message for ChaCha20 errors
 void PrintRegressErrorChaCha20(void) {
   fprintf(stderr, "ERROR - ChaCha20: invalid test vector file provided to regression.\n"); 
-  fprintf(stderr, "The file must contain a set of four lines where the first line is an input string within double quotes,\n");
+  fprintf(stderr, "The file must contain a set of five lines where the first line is an input ascii string within double quotes,\n");
   fprintf(stderr, "the second line is a hex string key that is exactly 64 characters long, the third line is a hex string\n");
-  fprintf(stderr, "nonce that is exactly 24 characters long, and the fourth line is a hex string equal to the length of\n");
-  fprintf(stderr, "the first line's characters in quotes multiplied by two.\n");
+  fprintf(stderr, "nonce that is exactly 24 characters long, the fourth line is the decimal initial block counter\n");
+  fprintf(stderr, "and the fifth line is a hex string equal to the length of the first line's characters in quotes multiplied by two.\n");
 }
 
 // Check if a ASCII string is all hex characters
@@ -149,7 +149,7 @@ void ChaCha20Test(void) {
 void RegressionChaCha20(FILE *testVecFile) {
   unsigned char line[(MAX_VECTOR_BYTE_LEN+1)], *input, *output, *targetOutput, *key, *nonce, *expectedOutput;
   unsigned char hexByte[3] = {0};
-  unsigned int dataRead = 0;
+  unsigned int dataRead = 0, blockCounter = 1;
   unsigned long inLenBits, outLenBytes;
   int totalFailures = 0, totalTests = 0, ind;
   
@@ -246,6 +246,21 @@ void RegressionChaCha20(FILE *testVecFile) {
       nonce[ind] = strtoul((const char *)hexByte, NULL, 16);
     }
 
+    // Initial Block Counter line processing
+    if(!fgets((char *)line, MAX_VECTOR_BYTE_LEN, testVecFile)) {
+      PrintRegressErrorChaCha20();
+      free(input); input = NULL;
+      free(key); key = NULL;
+      free(output); output = NULL;
+      break;
+    }
+    dataRead = strlen((const char *)line);
+    if (line[dataRead-1] == '\n') {
+      line[dataRead-1] = 0x0;
+      dataRead--;
+    }
+    blockCounter = strtoul((const char *)line, NULL, 10);
+
     // Expected output line processing
     if(!fgets((char *)line, MAX_VECTOR_BYTE_LEN, testVecFile)) {
       PrintRegressErrorChaCha20();
@@ -255,15 +270,14 @@ void RegressionChaCha20(FILE *testVecFile) {
       free(output); output = NULL;
       break;
     }
-
     dataRead = strlen((const char *)line);
     if (line[dataRead-1] == '\n') {
       line[dataRead-1] = 0x0;
       dataRead--;
     }
-
-    if (CheckHexString(line) || (dataRead % 2)) {
-      fprintf(stderr, "ERROR - invalid expected output line of text vector %d. Must be a even numbered string of hex characters.\n", totalTests);
+    outLenBytes = dataRead / 2;
+    if (CheckHexString(line) || (dataRead % 2) || ((inLenBits/8) != outLenBytes)) {
+      fprintf(stderr, "ERROR - invalid expected output line of text vector %d. Must be a even numbered string of hex characters double the length of the input ascii string.\n", totalTests);
       free(input); input = NULL;
       free(key); key = NULL;
       free(nonce); nonce = NULL;
@@ -279,13 +293,18 @@ void RegressionChaCha20(FILE *testVecFile) {
       free(output); output = NULL;
       break;
     }
-    outLenBytes = dataRead / 2;
     for (ind = 0; ind < outLenBytes; ind++) {
       memcpy(hexByte, line+(2*ind), sizeof(unsigned char)*2);
       expectedOutput[ind] = strtoul((const char *)hexByte, NULL, 16);
     }
-    ErikChaCha20Encrypt(input, key, nonce, 1, output);
 
+    // Perform Encryption
+    ErikChaCha20Encrypt(input, key, nonce, blockCounter, output);
+    for (ind = 0; ind < outLenBytes; ind++) {
+      if (output[ind] != expectedOutput[ind]) {
+        fprintf(stderr, "%d: expected %02x, output: %02x, delta: %02x\n", ind, expectedOutput[ind], output[ind], expectedOutput[ind]^output[ind]);
+      }
+    }
     /* Compared the output to expected output for result.*/
     if (memcmp(output, expectedOutput, outLenBytes)) {
       totalFailures++;
