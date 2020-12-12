@@ -117,3 +117,19 @@ void PrintChaCha20State(uint32_t *state) {
     if (!((i+1) % 4)) fprintf(stderr, "\n");
   }
 }
+
+int ErikGenPoly1305(unsigned char *input, unsigned char *key, unsigned char *tag) {
+  unsigned char *r, *s;
+
+  
+}
+
+void PolyClamp(unsigned char *r) {
+  r[3] &= 0xF;
+  r[7] &= 0xF;
+  r[11] &= 0xF;
+  r[15] &= 0xF;
+  r[4] &= 0xFC;
+  r[8] &= 0xFC;
+  r[12] &= 0xFC;
+}
